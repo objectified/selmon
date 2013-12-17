@@ -32,7 +32,7 @@ The next step is to download Selenium Server, and the appropriate drivers for va
 By default, the Selenium Server listens on port 4444. Let's create our first Selmon based Nagios plugin:
 
 
-    \#!/usr/bin/env python
+    #!/usr/bin/env python
 
     from selenium.webdriver.common.keys import Keys
     from selmon.nagios.plugin import Plugin
