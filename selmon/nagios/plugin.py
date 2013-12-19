@@ -92,8 +92,18 @@ class Plugin(object):
 
         self.global_timeout = args.timeout
 
-        self.conn = RemoteConnection(args.host)
-        self.driver = webdriver.Remote(self.conn, DesiredCapabilities.CHROME)
+        self.driver = None
+        try:
+            self.conn = RemoteConnection(args.host)
+            self.driver = webdriver.Remote(self.conn, DesiredCapabilities.CHROME)
+        except Exception as e:
+            self.nagios_message.add_msg('Connection to Selenium Server failed: %s' % e)
+            self.nagios_message.raise_status(NagiosMessage.NAGIOS_STATUS_UNKNOWN)
+            print self.nagios_message
+            sys.exit(self.nagios_message.status_code)
+        finally:
+            if self.driver:
+                self.driver.quit()
 
     def get_driver(self):
         """
