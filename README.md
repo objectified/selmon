@@ -7,7 +7,15 @@ applications easily. It does so by utilizing the great Selenium browser automati
 Selmon is the successor of Seymour (https://github.com/objectified/seymour). The main difference between the two is that
 Selmon is based on the new Selenium implementation which is based on Webdriver, whereas Seymour was based on
 Selenium 1/RC. Its implementation is fairly different, so the Webdriver implementation got a new name instead of just a
-version bump.
+version bump. There are a couple of reasons why you might want to do monitoring using real browsers (or browser
+engines), as opposed to writing scripts that simply perform HTTP requests and assert responses.
+* Web applications become more complex in terms of front end technology, which makes it increasingly harder to
+ analyse and simulate the actions of an application (ever tried to "script" monitoring for a GWT application?)
+* An actual browser is the most representative way of simulating client actions - it's also the only way to include the
+DOM in the monitoring process
+* When browser compatibility breaks, you will notice
+* Using automated browsers lets you test from a functional perspective, not a technical one; this means that the technical
+implementation might change, but as long as the interface stays the same you're fine
 
 ### Requirements
 * Python (2.7)
@@ -140,7 +148,7 @@ Another thing that is facilitated by extending the Plugin class is the retrieval
   easier ways to deal with such situations where all you want to do is check if an application is available. Check out
   the get_deferred_element_by_* methods in the Plugin class.
 
-### Seymour in production
+### Selmon in production
 As you may have figured out by now, to use most browsers you will need a machine with a desktop/X to run these tests.
 Your Nagios machine or Opsview masters/slaves probably don't have X installed (which is understandable), so I'd
 recommend having a few dedicated (virtual) machines that run one or more Selenium Server instances, so that you can
@@ -149,3 +157,16 @@ choose to use an in memory X server like Xvfb. In such a scenario, the Selmon Py
 on the machines you run your tests from, not on the machine that carries out the actual tests. Lately, Selenium even
 has support for PhantomJS, which does not require X at all. You can use that, if testing through the V8 engine is
 sufficient for you.
+
+### Known issues and shortcomings
+Using a functional testing tool (Selenium) for an entirely different goal (monitoring) comes with a few consequences.
+ There are a few things that are hard to do or even impossible when using Selenium. It's important to know about these.
+* Selenium does not provide access to HTTP status codes; in other words, you won't know whether a page returns a status
+code that lies in the 4xx/5xx range. To get around this, I suggest you check for the presence of elements on the page
+* A lot of exceptions that the Selenium Server can throw do not provide you with very specific information about errors
+that occur. In Selmon, when these cases occur, the Exception type is in the error message, and the exception message is
+shown when available. It's far from ideal, and I'm looking into ways to provide more information.
+* The performance data returned by Selmon is not entirely accurate, as the benchmarked code to provide performance data
+includes the HTTP calls made to the Selenium Server to trigger the remote commands that are sent to a browser. While
+these calls generally do not suffer from much overhead, it's important to know about this nuance when interpreting
+performance data. In other words, any network latency and Selenium Server performance can distort your performance data.
