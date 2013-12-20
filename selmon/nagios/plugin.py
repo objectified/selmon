@@ -8,7 +8,6 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 import sys
 import signal
-import time
 
 
 class Plugin(object):
@@ -97,13 +96,16 @@ class Plugin(object):
             self.conn = RemoteConnection(args.host)
             self.driver = webdriver.Remote(self.conn, DesiredCapabilities.CHROME)
         except Exception as e:
-            self.nagios_message.add_msg('Connection to Selenium Server failed: %s' % e)
+            message = e.message
+            if not message:
+                message = 'No message in exception'
+            self.nagios_message.add_msg('Connection to Selenium Server failed with exception: %s, message: %s' %
+                                        (e.__class__.__name__, message))
             self.nagios_message.raise_status(NagiosMessage.NAGIOS_STATUS_UNKNOWN)
-            print self.nagios_message
-            sys.exit(self.nagios_message.status_code)
-        finally:
             if self.driver:
                 self.driver.quit()
+            print self.nagios_message
+            sys.exit(self.nagios_message.status_code)
 
     def get_driver(self):
         """
@@ -165,10 +167,15 @@ class Plugin(object):
             self.nagios_message.add_msg('Global timeout of %s seconds reached' % self.global_timeout)
             self.nagios_message.raise_status(NagiosMessage.NAGIOS_STATUS_CRITICAL)
         except Exception as e:
-            self.nagios_message.add_msg('FAILED: %s' % e)
+            message = e.message
+            if not message:
+                message = 'No message in exception'
+            self.nagios_message.add_msg('FAILED: Exception of type: %s, message: %s' %
+                                        (e.__class__.__name__, message))
             self.nagios_message.raise_status(NagiosMessage.NAGIOS_STATUS_CRITICAL)
         finally:
             self.driver.quit()
+
             print self.nagios_message
             sys.exit(self.nagios_message.status_code)
 
