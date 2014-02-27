@@ -73,27 +73,30 @@ class Plugin(object):
         """
         self.nagios_message = NagiosMessage()
 
-        parser = argparse.ArgumentParser(add_help=True)
-        parser.add_argument('-H', '--host',
+        self.arg_parser = argparse.ArgumentParser(add_help=True)
+        self.arg_parser.add_argument('-H', '--host',
                             help='selenium webdriver remote host', required=True)
-        parser.add_argument('-t', '--timeout',
+        self.arg_parser.add_argument('-t', '--timeout',
                             help='timeout in seconds to use for whole execution', required=True, type=int)
-        parser.add_argument('-b', '--browser',
+        self.arg_parser.add_argument('-b', '--browser',
                              help='browser to use, possible values: %s' % ','.join(self.capabilities_mapping.keys()),
                              required=True)
 
-        args = parser.parse_args()
+        # can be overridden in subclass
+        self.add_extra_args()
 
-        if args.browser not in self.capabilities_mapping.keys():
-            self.nagios_message.add_msg('browser is invalid: %s' % args.browser)
+        self.args = self.arg_parser.parse_args()
+
+        if self.args.browser not in self.capabilities_mapping.keys():
+            self.nagios_message.add_msg('browser is invalid: %s' % self.args.browser)
             self.nagios_message.raise_status(NagiosMessage.NAGIOS_STATUS_UNKNOWN)
             sys.exit(self.nagios_message.status_code)
 
-        self.global_timeout = args.timeout
+        self.global_timeout = self.args.timeout
 
         self.driver = None
         try:
-            self.conn = RemoteConnection(args.host)
+            self.conn = RemoteConnection(self.args.host)
             self.driver = webdriver.Remote(self.conn, DesiredCapabilities.CHROME)
         except Exception as e:
             message = e.message
@@ -146,6 +149,14 @@ class Plugin(object):
         """
         Override this method in your own plugin, then call start() on the newly created
         object (not run() itself!)
+        """
+        pass
+
+    def add_extra_args(self):
+        """
+        To add extra arguments to your plugin, override this method and add arguments
+        to self.arg_parser (an argparse ArgumentParser object). The argument values
+        will be available in self.args
         """
         pass
 
