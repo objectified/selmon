@@ -148,6 +148,46 @@ Another thing that is facilitated by extending the Plugin class is the retrieval
   easier ways to deal with such situations where all you want to do is check if an application is available. Check out
   the get_deferred_element_by_* methods in the Plugin class.
 
+It is very likely that you'll want to use additional parameters for the Nagios plugin. Selmon provides a mechanism to do
+this. By overriding the add_extra_args method, you can add additional parameters to the argument parser. Here's a full
+example.
+
+    #!/usr/bin/env python
+
+    from selenium.webdriver.common.keys import Keys
+    from selmon.nagios.plugin import Plugin
+    from selmon.nagios.contextmanagers import benchmark
+
+
+    class DuckduckGoMonitor(Plugin):
+
+        def add_extra_args(self):
+            self.arg_parser.add_parameter('-f', '--file', 
+                help='Some helpful message for inclusion in -h', required=True)
+
+        def run(self):
+            print "Hey, I've got an -f parameter too, its value is: %s" % self.args.file
+
+            driver = self.get_driver()
+
+            with benchmark(self.nagios_message, 'open_homepage', warning=2):
+                driver.get('https://duckduckgo.com/')
+
+            search_elem = driver.find_element_by_name('q')
+            search_elem.send_keys('selenium')
+
+            with benchmark(self.nagios_message, 'submit_form'):
+                search_elem.send_keys(Keys.RETURN)
+
+            body_elem = driver.find_element_by_css_selector('body')
+
+            self.verify_text_present_in_elem(body_elem, 'selenium')
+
+
+    ddg_monitor = DuckduckGoMonitor()
+    ddg_monitor.start()
+
+
 ### Selmon in production
 As you may have figured out by now, to use most browsers you will need a machine with a desktop/X to run these tests.
 Your Nagios machine or Opsview masters/slaves probably don't have X installed (which is understandable), so I'd
@@ -163,9 +203,6 @@ Using a functional testing tool (Selenium) for an entirely different goal (monit
  There are a few things that are hard to do or even impossible when using Selenium. It's important to know about these.
 * Selenium does not provide access to HTTP status codes; in other words, you won't know whether a page returns a status
 code that lies in the 4xx/5xx range. To get around this, I suggest you check for the presence of elements on the page
-* A lot of exceptions that the Selenium Server can throw do not provide you with very specific information about errors
-that occur. In Selmon, when these cases occur, the Exception type is in the error message, and the exception message is
-shown when available. It's far from ideal, and I'm looking into ways to provide more information.
 * The performance data returned by Selmon is not entirely accurate, as the benchmarked code to provide performance data
 includes the HTTP calls made to the Selenium Server to trigger the remote commands that are sent to a browser. While
 these calls generally do not suffer from much overhead, it's important to know about this nuance when interpreting
