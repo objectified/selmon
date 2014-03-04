@@ -99,11 +99,11 @@ class Plugin(object):
             self.conn = RemoteConnection(self.args.host)
             self.driver = webdriver.Remote(self.conn, DesiredCapabilities.CHROME)
         except Exception as e:
-            message = e.message
-            if not message:
-                message = 'No message in exception'
+            if not e.args:
+                e.args = ('No message in exception',)
+
             self.nagios_message.add_msg('Connection to Selenium Server failed with exception: %s, message: %s' %
-                                        (e.__class__.__name__, message))
+                                        (str(type(e)), e.args[0]))
             self.nagios_message.raise_status(NagiosMessage.NAGIOS_STATUS_UNKNOWN)
             if self.driver:
                 self.driver.quit()
