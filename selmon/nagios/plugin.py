@@ -178,11 +178,11 @@ class Plugin(object):
             self.nagios_message.add_msg('Global timeout of %s seconds reached' % self.global_timeout)
             self.nagios_message.raise_status(NagiosMessage.NAGIOS_STATUS_CRITICAL)
         except Exception as e:
-            message = e.message
-            if not message:
-                message = 'No message in exception'
+            if not e.args:
+                e.args = ('No message in exception',)
+
             self.nagios_message.add_msg('FAILED: Exception of type: %s, message: %s' %
-                                        (e.__class__.__name__, message))
+                                        (str(type(e)), e.args[0]))
             self.nagios_message.raise_status(NagiosMessage.NAGIOS_STATUS_CRITICAL)
         finally:
             self.driver.quit()
