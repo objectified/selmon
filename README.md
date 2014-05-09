@@ -9,12 +9,12 @@ Selmon is based on the new Selenium implementation which is based on Webdriver, 
 Selenium 1/RC. Its implementation is fairly different, so the Webdriver implementation got a new name instead of just a
 version bump. There are a couple of reasons why you might want to do monitoring using real browsers (or browser
 engines), as opposed to writing scripts that simply perform HTTP requests and assert responses.
-* Web applications become more complex in terms of front end technology, which makes it increasingly harder to
+- Web applications become more complex in terms of front end technology, which makes it increasingly harder to
  analyse and simulate the actions of an application (ever tried to "script" monitoring for a GWT application?)
-* An actual browser is the most representative way of simulating client actions - it's also the only way to include the
+- An actual browser is the most representative way of simulating client actions - it's also the only way to include the
 DOM in the monitoring process
-* When browser compatibility breaks, you will notice
-* Using automated browsers lets you test from a functional perspective, not a technical one; this means that the technical
+- When browser compatibility breaks, you will notice
+- Using automated browsers lets you test from a functional perspective, not a technical one; this means that the technical
 implementation might change, but as long as the interface stays the same you're fine
 
 ### Requirements
