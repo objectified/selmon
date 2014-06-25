@@ -233,6 +233,12 @@ class Plugin(object):
         return self._get_deferred_element_by(name, By.NAME, timeout)
 
     def get_broken_images(self):
+        """
+        Get broken images from current web location. There is no natural way to do this through
+        Selenium. The way this method works, is that it retrieves all image objects from the DOM,
+        iterates over them, and checks if its naturalWidth and naturalHeight properties are both
+        zero. If so, it's probably a broken image, and it will be reported as such.
+        """
         images = self.driver.execute_script('return document.images')
         broken_images = []
 
