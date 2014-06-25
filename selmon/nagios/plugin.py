@@ -145,6 +145,20 @@ class Plugin(object):
 
         return True
 
+    def verify_broken_images(self, error_status=NagiosMessage.NAGIOS_STATUS_WARNING):
+        """
+        Verifies if the current page has broken images. Adds information to the NagiosMessage
+        object, and raises its exit status to the status given to the error_status kwarg (defaults
+        to warning)
+        """
+        broken_images = self.get_broken_images()
+        if len(broken_images) > 0:
+            self.nagios_message.add_msg('Found broken images: %s' % ', '.join(broken_images))
+            self.nagios_message.raise_status(error_status)
+            return False
+
+        return True
+
     def run(self):
         """
         Override this method in your own plugin, then call start() on the newly created
@@ -217,6 +231,19 @@ class Plugin(object):
 
     def get_deferred_element_by_name(self, name, timeout=5):
         return self._get_deferred_element_by(name, By.NAME, timeout)
+
+    def get_broken_images(self):
+        images = self.driver.execute_script('return document.images')
+        broken_images = []
+
+        for image in images:
+            naturalWidth = int(image.get_attribute('naturalWidth'))
+            naturalHeight = int(image.get_attribute('naturalHeight'))
+
+            if not naturalWidth and not naturalHeight:
+                broken_images.append(image.get_attribute('src'))
+
+        return broken_images
 
 
 class TimeoutException(Exception):
