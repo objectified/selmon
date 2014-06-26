@@ -5,7 +5,7 @@ setup(
     version='0.1',
     packages=['selmon','selmon.nagios'],
     url='https://github.com/objectified/selmon',
-    install_requires=['selenium>=2.38.3', 'argparse>=1.2.1'],
+    install_requires=['selenium>=2.38.3'],
     license='Apache License, 2.0',
     author='lbrouwer',
     author_email='objectified@gmail.com',
