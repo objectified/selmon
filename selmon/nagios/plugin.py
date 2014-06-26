@@ -74,13 +74,8 @@ class Plugin(object):
         self.nagios_message = NagiosMessage()
 
         self.arg_parser = argparse.ArgumentParser(add_help=True)
-        self.arg_parser.add_argument('-H', '--host',
-                            help='selenium webdriver remote host', required=True)
-        self.arg_parser.add_argument('-t', '--timeout',
-                            help='timeout in seconds to use for whole execution', required=True, type=int)
-        self.arg_parser.add_argument('-b', '--browser',
-                             help='browser to use, possible values: %s' % ','.join(self.capabilities_mapping.keys()),
-                             required=True)
+
+        self.setup_default_args()
 
         # can be overridden in subclass
         self.add_extra_args()
@@ -97,7 +92,7 @@ class Plugin(object):
         self.driver = None
         try:
             self.conn = RemoteConnection(self.args.host)
-            self.driver = webdriver.Remote(self.conn, DesiredCapabilities.CHROME)
+            self.driver = webdriver.Remote(self.conn, self.capabilities_mapping[self.args.browser])
         except Exception as e:
             if not e.args:
                 e.args = ('No message in exception',)
@@ -109,6 +104,20 @@ class Plugin(object):
                 self.driver.quit()
             print self.nagios_message
             sys.exit(self.nagios_message.status_code)
+
+    def setup_default_args(self):
+        self.arg_parser.add_argument('-H', '--host',
+                            help='selenium webdriver remote host',
+                            required=True)
+        self.arg_parser.add_argument('-t', '--timeout',
+                            help='timeout in seconds to use for whole execution',
+                            required=True,
+                            type=int)
+        self.arg_parser.add_argument('-b', '--browser',
+                             help='browser to use, possible values: %s' %
+                                    ','.join(self.capabilities_mapping.keys()),
+                             required=True)
+
 
     def get_driver(self):
         """
