@@ -244,19 +244,31 @@ class Plugin(object):
     def get_broken_images(self):
         """
         Get broken images from current web location. There is no natural way to do this through
-        Selenium. The way this method works, is that it retrieves all image objects from the DOM,
-        iterates over them, and checks if its naturalWidth and naturalHeight properties are both
-        zero. If so, it's probably a broken image, and it will be reported as such.
+        Selenium. The way this method works, is that it retrieves all src/naturalHeight/naturalWidth
+        properties of all image objects from the DOM, iterates over the properties for each image,
+        and checks if its naturalWidth and naturalHeight properties are both zero. If so, it's probably
+        a broken image, and it will be reported as such. It explicitly executes all logic inside the browser
+        to avoid Selenium call overhead.
         """
-        images = self.driver.execute_script('return document.images')
         broken_images = []
 
+        images = self.driver.execute_script("""
+            var imageinfo = new Array();
+            for(var i = 0; i < document.images.length; i++) {
+                imageinfo.push({
+                    src: document.images[i].src,
+                    naturalHeight: document.images[i].naturalHeight,
+                    naturalWidth: document.images[i].naturalWidth
+                });
+            }
+            return imageinfo;""")
+
         for image in images:
-            naturalWidth = int(image.get_attribute('naturalWidth'))
-            naturalHeight = int(image.get_attribute('naturalHeight'))
+            naturalWidth = int(image['naturalWidth'])
+            naturalHeight = int(image['naturalHeight'])
 
             if not naturalWidth and not naturalHeight:
-                broken_images.append(image.get_attribute('src'))
+                broken_images.append(image['src'])
 
         return broken_images
 
