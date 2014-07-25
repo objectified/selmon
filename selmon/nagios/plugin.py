@@ -8,6 +8,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 import sys
 import signal
+import traceback
 
 
 class Plugin(object):
@@ -64,6 +65,7 @@ class Plugin(object):
         'safari': DesiredCapabilities.SAFARI
     }
 
+
     def __init__(self):
         """
         Plugin constructor. Since this base object gets inherited, there is no need to take care of
@@ -90,20 +92,7 @@ class Plugin(object):
         self.global_timeout = self.args.timeout
 
         self.driver = None
-        try:
-            self.conn = RemoteConnection(self.args.host)
-            self.driver = webdriver.Remote(self.conn, self.capabilities_mapping[self.args.browser])
-        except Exception as e:
-            if not e.args:
-                e.args = ('No message in exception',)
 
-            self.nagios_message.add_msg('Connection to Selenium Server failed with exception: %s, message: %s' %
-                                        (str(type(e)), e.args[0]))
-            self.nagios_message.raise_status(NagiosMessage.NAGIOS_STATUS_UNKNOWN)
-            if self.driver:
-                self.driver.quit()
-            print self.nagios_message
-            sys.exit(self.nagios_message.status_code)
 
     def setup_default_args(self):
         self.arg_parser.add_argument('-H', '--host',
@@ -119,11 +108,30 @@ class Plugin(object):
                              required=True)
 
 
+    def init_connection(self):
+        try:
+            self.conn = RemoteConnection(self.args.host)
+        except Exception as e:
+            exc_class, exc, tb = sys.exc_info()
+            new_exc = ConnectionException("Error connecting to Selenium server")
+            raise new_exc.__class__, new_exc, tb
+
+
+    def init_driver(self):
+        try:
+            self.driver = webdriver.Remote(self.conn, self.capabilities_mapping[self.args.browser])
+        except Exception as e:
+            exc_class, exc, tb = sys.exc_info()
+            new_exc = DriverInitException("Error initializing driver")
+            raise DriverInitException, None, tb
+
+
     def get_driver(self):
         """
         Returns the Selenium Remote webdriver instance
         """
         return self.driver
+
 
     def verify_equals(self, label, actual_value, expected_value,
                       error_status=NagiosMessage.NAGIOS_STATUS_CRITICAL):
@@ -140,6 +148,7 @@ class Plugin(object):
 
         return True
 
+
     def verify_text_present_in_elem(self, elem, text,
                                     error_status=NagiosMessage.NAGIOS_STATUS_CRITICAL):
         """
@@ -153,6 +162,7 @@ class Plugin(object):
             return False
 
         return True
+
 
     def verify_broken_images(self, error_status=NagiosMessage.NAGIOS_STATUS_WARNING):
         """
@@ -168,12 +178,14 @@ class Plugin(object):
 
         return True
 
+
     def run(self):
         """
         Override this method in your own plugin, then call start() on the newly created
         object (not run() itself!)
         """
         pass
+
 
     def add_extra_args(self):
         """
@@ -183,6 +195,7 @@ class Plugin(object):
         """
         pass
 
+
     def start(self):
         """
         Call the start() method for actual execution of the plugin. It calls the run()
@@ -190,16 +203,26 @@ class Plugin(object):
         determined during the test run and the plugin exits accordingly.
         """
         def timeout_handler(signum, frame):
-            raise TimeoutException()
+            raise GlobalTimeoutException()
 
         signal.signal(signal.SIGALRM, timeout_handler)
         signal.alarm(self.global_timeout)
 
         try:
+            self.init_connection()
+            self.init_driver()
+
             self.run()
-        except TimeoutException:
+
+        except GlobalTimeoutException as e:
             self.nagios_message.add_msg('Global timeout of %s seconds reached' % self.global_timeout)
             self.nagios_message.raise_status(NagiosMessage.NAGIOS_STATUS_CRITICAL)
+        except ConnectionException:
+            self.nagios_message.add_msg('Could not connect to Selenium server at ' % self.args.host)
+            self.nagios_message.raise_status(NagiosMessage.NAGIOS_STATUS_UNKNOWN)
+        except DriverInitException as e:
+            self.nagios_message.add_msg('Could not initialize Selenium driver')
+            self.nagios_message.raise_status(NagiosMessage.NAGIOS_STATUS_UNKNOWN)
         except Exception as e:
             if not e.args:
                 e.args = ('No message in exception',)
@@ -208,10 +231,12 @@ class Plugin(object):
                                         (str(type(e)), e.args[0]))
             self.nagios_message.raise_status(NagiosMessage.NAGIOS_STATUS_CRITICAL)
         finally:
-            self.driver.quit()
+            if self.driver:
+                self.driver.quit()
 
             print self.nagios_message
             sys.exit(self.nagios_message.status_code)
+
 
     def _get_deferred_element_by(self, search, by, timeout=5):
         elem = WebDriverWait(self.driver, timeout).until(
@@ -220,26 +245,34 @@ class Plugin(object):
         )
         return elem
 
+
     def get_deferred_element_by_xpath(self, xpath, timeout=5):
         return self._get_deferred_element_by(xpath, By.XPATH, timeout)
+
 
     def get_deferred_element_by_class(self, class_name, timeout=5):
         return self._get_deferred_element_by(class_name, By.CLASS_NAME, timeout)
 
+
     def get_deferred_element_by_css_selector(self, selector, timeout=5):
         return self._get_deferred_element_by(selector, By.CSS_SELECTOR, timeout)
+
 
     def get_deferred_element_by_id(self, id, timeout=5):
         return self._get_deferred_element_by(id, By.ID, timeout)
 
+
     def get_deferred_element_by_link_text(self, link_text, timeout=5):
         return self._get_deferred_element_by(link_text, By.LINK_TEXT, timeout)
+
 
     def get_deferred_element_by_tag_name(self, tag_name, timeout=5):
         return self._get_deferred_element_by(tag_name, By.TAG_NAME, timeout)
 
+
     def get_deferred_element_by_name(self, name, timeout=5):
         return self._get_deferred_element_by(name, By.NAME, timeout)
+
 
     def get_broken_images(self):
         """
@@ -273,5 +306,11 @@ class Plugin(object):
         return broken_images
 
 
-class TimeoutException(Exception):
+class GlobalTimeoutException(Exception):
+    pass
+
+class ConnectionException(Exception):
+    pass
+
+class DriverInitException(Exception):
     pass
