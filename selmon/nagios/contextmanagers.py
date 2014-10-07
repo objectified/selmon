@@ -1,4 +1,5 @@
 from selmon.nagios.nagiosmessage import NagiosMessage
+from selmon.nagios.plugin import SelmonTestException
 from contextlib import contextmanager
 import time
 
@@ -19,3 +20,12 @@ def benchmark(nagios_message, label, warning=3, critical=5):
     elif elapsed > warning:
         nagios_message.add_msg("'%s' exceeded warning threshold of %s" % (label, warning))
         nagios_message.raise_status(NagiosMessage.NAGIOS_STATUS_WARNING)
+
+
+@contextmanager
+def test(nagios_message, label, status=NagiosMessage.NAGIOS_STATUS_CRITICAL):
+    try:
+        yield
+    except SelmonTestException as e:
+        nagios_message.add_msg("Test failed: '%s'" % label)
+        nagios_message.raise_status(status)

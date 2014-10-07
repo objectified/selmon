@@ -1,10 +1,8 @@
 import argparse
 from selmon.nagios.nagiosmessage import NagiosMessage
+from selmon.nagios.selmonremotedriver import SelmonRemoteDriver
 from selenium import webdriver
 from selenium.webdriver.remote.remote_connection import RemoteConnection
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions
-from selenium.webdriver.common.by import By
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 import sys
 import signal
@@ -25,7 +23,7 @@ class Plugin(object):
 
     from selenium.webdriver.common.keys import Keys
     from selmon.nagios.plugin import Plugin
-    from selmon.nagios.contextmanagers import benchmark
+    from selmon.nagios.contextmanagers import benchmark, test
 
 
     class DuckduckGoMonitor(Plugin):
@@ -44,7 +42,8 @@ class Plugin(object):
 
             body_elem = driver.find_element_by_css_selector('body')
 
-            self.verify_text_present_in_elem(body_elem, 'selenium')
+            with test(self.nagios_message, 'is my expected text there'):
+                self.verify(driver.is_text_present_in_elem(body_elem, 'selenium'))
 
 
     ddg_monitor = DuckduckGoMonitor()
@@ -119,7 +118,7 @@ class Plugin(object):
 
     def init_driver(self):
         try:
-            self.driver = webdriver.Remote(self.conn, self.capabilities_mapping[self.args.browser])
+            self.driver = SelmonRemoteDriver(self.conn, self.capabilities_mapping[self.args.browser])
         except Exception as e:
             exc_class, exc, tb = sys.exc_info()
             new_exc = DriverInitException("Error initializing driver")
@@ -133,50 +132,9 @@ class Plugin(object):
         return self.driver
 
 
-    def verify_equals(self, label, actual_value, expected_value,
-                      error_status=NagiosMessage.NAGIOS_STATUS_CRITICAL):
-        """
-        Creates a test that checks for object equality. The error_status parameter
-        defines what Nagios status is returned when the test fails (use NAGIOS_STATUS_*
-        constants defined in NagiosMessage)
-        """
-        if actual_value != expected_value:
-            self.nagios_message.add_msg('Test failed: %s, expected: %s, actual: %s' %
-                                        (label, expected_value, actual_value))
-            self.nagios_message.raise_status(error_status)
-            return False
-
-        return True
-
-
-    def verify_text_present_in_elem(self, elem, text,
-                                    error_status=NagiosMessage.NAGIOS_STATUS_CRITICAL):
-        """
-        Verifies that the given text is present in the `text` property of a Selenium
-        Element object. The error_status parameter defines what Nagios status is returned
-        when the test fails (use NAGIOS_STATUS_* constants defined in NagiosMessage)
-        """
-        if not text in elem.text:
-            self.nagios_message.add_msg('Text not present: %s' % text)
-            self.nagios_message.raise_status(error_status)
-            return False
-
-        return True
-
-
-    def verify_broken_images(self, error_status=NagiosMessage.NAGIOS_STATUS_WARNING):
-        """
-        Verifies if the current page has broken images. Adds information to the NagiosMessage
-        object, and raises its exit status to the status given to the error_status kwarg (defaults
-        to warning)
-        """
-        broken_images = self.get_broken_images()
-        if len(broken_images) > 0:
-            self.nagios_message.add_msg('Found broken images: %s' % ', '.join(broken_images))
-            self.nagios_message.raise_status(error_status)
-            return False
-
-        return True
+    def verify(self, boolean):
+        if not boolean:
+            raise SelmonTestException('verify failed')
 
 
     def run(self):
@@ -238,73 +196,8 @@ class Plugin(object):
             sys.exit(self.nagios_message.status_code)
 
 
-    def _get_deferred_element_by(self, search, by, timeout=5):
-        elem = WebDriverWait(self.driver, timeout).until(
-            expected_conditions.presence_of_element_located((by, search)),
-            'Timeout occurred while waiting for element: %s' % search
-        )
-        return elem
-
-
-    def get_deferred_element_by_xpath(self, xpath, timeout=5):
-        return self._get_deferred_element_by(xpath, By.XPATH, timeout)
-
-
-    def get_deferred_element_by_class(self, class_name, timeout=5):
-        return self._get_deferred_element_by(class_name, By.CLASS_NAME, timeout)
-
-
-    def get_deferred_element_by_css_selector(self, selector, timeout=5):
-        return self._get_deferred_element_by(selector, By.CSS_SELECTOR, timeout)
-
-
-    def get_deferred_element_by_id(self, id, timeout=5):
-        return self._get_deferred_element_by(id, By.ID, timeout)
-
-
-    def get_deferred_element_by_link_text(self, link_text, timeout=5):
-        return self._get_deferred_element_by(link_text, By.LINK_TEXT, timeout)
-
-
-    def get_deferred_element_by_tag_name(self, tag_name, timeout=5):
-        return self._get_deferred_element_by(tag_name, By.TAG_NAME, timeout)
-
-
-    def get_deferred_element_by_name(self, name, timeout=5):
-        return self._get_deferred_element_by(name, By.NAME, timeout)
-
-
-    def get_broken_images(self):
-        """
-        Get broken images from current web location. There is no natural way to do this through
-        Selenium. The way this method works, is that it retrieves all src/naturalHeight/naturalWidth
-        properties of all image objects from the DOM, iterates over the properties for each image,
-        and checks if its naturalWidth and naturalHeight properties are both zero. If so, it's probably
-        a broken image, and it will be reported as such. It explicitly executes all logic inside the browser
-        to avoid Selenium call overhead.
-        """
-        broken_images = []
-
-        images = self.driver.execute_script("""
-            var imageinfo = new Array();
-            for(var i = 0; i < document.images.length; i++) {
-                imageinfo.push({
-                    src: document.images[i].src,
-                    naturalHeight: document.images[i].naturalHeight,
-                    naturalWidth: document.images[i].naturalWidth
-                });
-            }
-            return imageinfo;""")
-
-        for image in images:
-            naturalWidth = int(image['naturalWidth'])
-            naturalHeight = int(image['naturalHeight'])
-
-            if not naturalWidth and not naturalHeight:
-                broken_images.append(image['src'])
-
-        return broken_images
-
+class SelmonTestException(Exception):
+    pass
 
 class GlobalTimeoutException(Exception):
     pass
@@ -314,3 +207,5 @@ class ConnectionException(Exception):
 
 class DriverInitException(Exception):
     pass
+
+
