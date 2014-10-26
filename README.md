@@ -71,7 +71,7 @@ By default, the Selenium Server listens on port 4444. Let's create our first Sel
 
 
 
-The plugin as written above retrieves https://www.seleniumhq.org/, types a query in the search field, submits the search form
+The plugin as written above retrieves http://www.seleniumhq.org/, types a query in the search field, submits the search form
 and asserts that there are results in the resulting response. First let's see how the script can be used. Give it execute
 permissions and run the following:
 
