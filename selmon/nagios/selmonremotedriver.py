@@ -9,7 +9,6 @@ class SelmonRemoteDriver(webdriver.Remote):
     of convenience functions for use with monitoring
     """
 
-
     def is_text_present_in_elem(self, elem, text):
         """
         Verifies that the given text is present in the `text` property of a Selenium
@@ -20,7 +19,6 @@ class SelmonRemoteDriver(webdriver.Remote):
             return False
 
         return True
-
 
     def verify_broken_images(self):
         """
@@ -33,7 +31,6 @@ class SelmonRemoteDriver(webdriver.Remote):
             return broken_images
 
         return None
-
 
     def get_broken_images(self):
         """
@@ -59,14 +56,13 @@ class SelmonRemoteDriver(webdriver.Remote):
         print images
 
         for image in images:
-            naturalWidth = int(image['naturalWidth'])
-            naturalHeight = int(image['naturalHeight'])
+            natural_width = int(image['naturalWidth'])
+            natural_height = int(image['naturalHeight'])
 
-            if not naturalWidth and not naturalHeight:
+            if not natural_width and not natural_height:
                 broken_images.append(image['src'])
 
         return broken_images
-
 
     def _find_deferred_element_by(self, search, by, timeout=5):
         elem = WebDriverWait(self, timeout).until(
@@ -75,30 +71,23 @@ class SelmonRemoteDriver(webdriver.Remote):
         )
         return elem
 
-
     def find_deferred_element_by_xpath(self, xpath, timeout=5):
         return self._find_deferred_element_by(xpath, By.XPATH, timeout)
-
 
     def find_deferred_element_by_class(self, class_name, timeout=5):
         return self._find_deferred_element_by(class_name, By.CLASS_NAME, timeout)
 
-
     def find_deferred_element_by_css_selector(self, selector, timeout=5):
         return self._find_deferred_element_by(selector, By.CSS_SELECTOR, timeout)
-
 
     def find_deferred_element_by_id(self, id, timeout=5):
         return self._find_deferred_element_by(id, By.ID, timeout)
 
-
     def find_deferred_element_by_link_text(self, link_text, timeout=5):
         return self._find_deferred_element_by(link_text, By.LINK_TEXT, timeout)
 
-
     def find_deferred_element_by_tag_name(self, tag_name, timeout=5):
         return self._find_deferred_element_by(tag_name, By.TAG_NAME, timeout)
-
 
     def find_deferred_element_by_name(self, name, timeout=5):
         return self._find_deferred_element_by(name, By.NAME, timeout)
