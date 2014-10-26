@@ -1,12 +1,11 @@
 import argparse
 from selmon.nagios.nagiosmessage import NagiosMessage
 from selmon.nagios.selmonremotedriver import SelmonRemoteDriver
-from selenium import webdriver
 from selenium.webdriver.remote.remote_connection import RemoteConnection
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
+from selenium.common.exceptions import WebDriverException
 import sys
 import signal
-import traceback
 
 
 class Plugin(object):
@@ -164,6 +163,9 @@ class Plugin(object):
 
             self.run()
 
+        except WebDriverException as e:
+            self.nagios_message.add_msg('WebDriverException occurred: %s' % e.msg)
+            self.nagios_message.raise_status(NagiosMessage.NAGIOS_STATUS_CRITICAL)
         except GlobalTimeoutException as e:
             self.nagios_message.add_msg('Global timeout of %s seconds reached' % self.global_timeout)
             self.nagios_message.raise_status(NagiosMessage.NAGIOS_STATUS_CRITICAL)
