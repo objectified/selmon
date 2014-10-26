@@ -1,6 +1,8 @@
 # Selmon
 ## Using Selenium Webdriver for Nagios Monitoring
 
+<em>Note: when upgrading from 0.1 to 0.2, expect the API to break. On the upside: the new API is more sane.</em>
+
 ### Introduction
 Selmon is a Python library for creating Nagios plugins that use real browsers, in order to be able to monitor web
 applications easily. It does so by utilizing the great Selenium browser automation framework.
