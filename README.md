@@ -39,6 +39,7 @@ The next step is to download Selenium Server, and the appropriate drivers for va
 
 By default, the Selenium Server listens on port 4444. Let's create our first Selmon based Nagios plugin:
 
+
     #!/usr/bin/env python
     from selenium.webdriver.common.keys import Keys
     from selmon.nagios.plugin import Plugin
@@ -98,7 +99,7 @@ is available on the machine on which the Selenium Server runs
 We will go into details later, but first let's have a look at the script in action. Give the script execute permissions
 to run on its own, and execute it with the following parameters.
 
-    $ ./selhq_monitor.py -H http://localhost:4444 -t 30 -b chrome
+    $ ./selhq_monitor.py -H http://localhost:4444/wd/hub -t 30 -b chrome
     OK: open_homepage executed in 2.47832202911 seconds, submit_form executed in 2.45883488655 seconds | 'open_homepage'=2.47832202911s;5;5;; 'submit_form'=2.45883488655s;3;5;;
     $ echo $?
     0
