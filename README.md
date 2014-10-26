@@ -27,7 +27,7 @@ implementation might change, but as long as the interface stays the same you're 
 I'm assuming you're already somewhat familiar with Python and Nagios/NRPE. If you want to give Selmon a quick spin,
 you'll obviously need to install it. I prefer to use a virtualenv environment, I'm guessing you do too.
 
-    $ git clone https://github.com/objectified/selmon.git selmon
+    $ git clone https://github.com/objectified/selmon
     $ virtualenv selmon
     $ cd selmon && source bin/activate
     $ python setup.py install
@@ -39,42 +39,43 @@ The next step is to download Selenium Server, and the appropriate drivers for va
 
 By default, the Selenium Server listens on port 4444. Let's create our first Selmon based Nagios plugin:
 
-
     #!/usr/bin/env python
-
     from selenium.webdriver.common.keys import Keys
     from selmon.nagios.plugin import Plugin
-    from selmon.nagios.contextmanagers import benchmark
-
-
-    class DuckduckGoMonitor(Plugin):
-
+    from selmon.nagios.contextmanagers import benchmark, test
+    
+    
+    class SeleniumHQMonitor(Plugin):
+    
         def run(self):
-            driver = self.get_driver()
-
+            driver = self.driver
+    
             with benchmark(self.nagios_message, 'open_homepage', warning=2):
-                driver.get('https://duckduckgo.com/')
-
+                driver.get('http://www.seleniumhq.org/')
+    
             search_elem = driver.find_element_by_name('q')
-            search_elem.send_keys('selenium')
-
+            search_elem.send_keys('python')
+    
             with benchmark(self.nagios_message, 'submit_form'):
                 search_elem.send_keys(Keys.RETURN)
+    
+            body_elem = driver.find_deferred_element_by_css_selector('body')
+    
+            with test(self.nagios_message, 'text present: python'):
+                self.verify(driver.is_text_present_in_elem(body_elem, 'python'))
+    
+    
+    monitor = SeleniumHQMonitor()
+    monitor.start()
 
-            body_elem = driver.find_element_by_css_selector('body')
-
-            self.verify_text_present_in_elem(body_elem, 'selenium')
 
 
-    ddg_monitor = DuckduckGoMonitor()
-    ddg_monitor.start()
-
-The plugin as written above retrieves https://duckduckgo.com/, types a query in the search field, submits the search form
+The plugin as written above retrieves https://www.seleniumhq.org/, types a query in the search field, submits the search form
 and asserts that there are results in the resulting response. First let's see how the script can be used. Give it execute
 permissions and run the following:
 
-    $ ./ddg_monitor.py --help
-    usage: selenium_run_duckduckgo.py [-h] -H HOST -t TIMEOUT -b BROWSER
+    $ ./selhq_monitor.py --help
+    usage: selhq_monitor.py [-h] -H HOST -t TIMEOUT -b BROWSER
 
     optional arguments:
       -h, --help            show this help message and exit
@@ -97,7 +98,7 @@ is available on the machine on which the Selenium Server runs
 We will go into details later, but first let's have a look at the script in action. Give the script execute permissions
 to run on its own, and execute it with the following parameters.
 
-    $ ./ddg_monitor.py -H http://localhost:4444 -t 30 -b chrome
+    $ ./selhq_monitor.py -H http://localhost:4444 -t 30 -b chrome
     OK: open_homepage executed in 2.47832202911 seconds, submit_form executed in 2.45883488655 seconds | 'open_homepage'=2.47832202911s;5;5;; 'submit_form'=2.45883488655s;3;5;;
     $ echo $?
     0
@@ -111,10 +112,10 @@ indicates the separation of a Nagios textual message and its performance data. E
   the plugin's expectations. For example, you could change the text 'selenium' in the text verification statement to
   something that is unlikely to occur, for example: 'seleniummm'. Now let us look at the code.
 
-As you can see, the newly created class inherits from the Plugin class in selmon.nagios.plugin, which takes care of most
+As you can see, the newly created class inherits from the Plugin class in the selmon.nagios.plugin module, which takes care of most
 things Nagios for us. The only thing left for us to do, is override its run() method and define the actual work for the
 plugin we want to create. Within this run() method, we can get a reference to the underlying Selenium Driver object
-(self.get_driver()), which we can then use to write regular Selenium Webdriver code. In fact, we could just write
+(self.driver), which we can then use to write regular Selenium Webdriver code. In fact, we could just write
 Webdriver code in the run() method and be done with it. But that's not all we want in a monitoring context. Selenium is
 primarily used for functional web application testing, and for monitoring we probably have a few additional goals,
 mostly centered around benchmarking response times and testing for certain conditions on which we will want to base the
@@ -133,12 +134,13 @@ graphs in Nagios
 should end up in warning or critical state. The defaults are 3 (warning) and 5 (critical)
 
 A very common use case inside a monitoring run, is to verify whether a certain condition is true - and if it isn't,
-generate a warning or critical message. Selmon provides basic support for this through its verify_equals() and
-verify_text_present_in_elem() methods, where the first checks for object equality, and the latter checks if the '.text'
-attribute of a Webdriver Element object contains the given string. When these methods fail, they make sure that the
-Nagios message that has been passed to them changes its state. You can influence what state will be in effect by
-explicitly setting the error_status parameter, which can be set to one of the NagiosMessage.NAGIOS_STATUS_* values. The
-default state that is used when a test fails is NagiosMessage.NAGIOS_STATUS_CRITICAL.
+generate a warning or critical message. If we were using Selenium as a functional test tool, this functionality would 
+have been covered by the unit testing framework we were using to execute the Selenium runs. Here, we're not really using
+a unit testing framework, so Selmon provides its own way to do this. As with the benchmark() context manager, Selmon also 
+provides a contextmanager for these kinds of tests, surprisingly, called test(). It works very similar to benchmark(). 
+Inside a call to the test() contextmanager, self.verify() can be used to verify a certain condition. self.verify() accepts
+a boolean argument, and throws a SelmonTestException when the boolean evaluates to False. This makes sure that the test()
+context manager can treat the Nagios object accordingly, add a message to it and set the correct Nagios exit code.
 
 Another thing that is facilitated by extending the Plugin class is the retrieval of elements from the DOM that may not
  be immediately available, because the DOM might still be loading while the Webdriver client already tries to do its
@@ -149,43 +151,44 @@ Another thing that is facilitated by extending the Plugin class is the retrieval
   the get_deferred_element_by_* methods in the Plugin class.
 
 It is very likely that you'll want to use additional parameters for the Nagios plugin. Selmon provides a mechanism to do
-this. By overriding the add_extra_args method, you can add additional parameters to the argument parser. Here's a full
-example.
+this. By overriding the add_extra_args method, you can add additional parameters to the argument parser (which is an 
+argparse.ArgumentParser instance). Here's a full example.
 
     #!/usr/bin/env python
-
     from selenium.webdriver.common.keys import Keys
     from selmon.nagios.plugin import Plugin
-    from selmon.nagios.contextmanagers import benchmark
-
-
-    class DuckduckGoMonitor(Plugin):
-
+    from selmon.nagios.contextmanagers import benchmark, test
+    
+    
+    class SeleniumHQMonitor(Plugin):
+    
+    
         def add_extra_args(self):
-            self.arg_parser.add_parameter('-f', '--file', 
+            self.arg_parser.add_argument('-f', '--file', 
                 help='Some helpful message for inclusion in -h', required=True)
-
+                
         def run(self):
             print "Hey, I've got an -f parameter too, its value is: %s" % self.args.file
-
-            driver = self.get_driver()
-
+            
+            driver = self.driver
+    
             with benchmark(self.nagios_message, 'open_homepage', warning=2):
-                driver.get('https://duckduckgo.com/')
-
+                driver.get('http://www.seleniumhq.org/')
+    
             search_elem = driver.find_element_by_name('q')
-            search_elem.send_keys('selenium')
-
+            search_elem.send_keys('python')
+    
             with benchmark(self.nagios_message, 'submit_form'):
                 search_elem.send_keys(Keys.RETURN)
-
-            body_elem = driver.find_element_by_css_selector('body')
-
-            self.verify_text_present_in_elem(body_elem, 'selenium')
-
-
-    ddg_monitor = DuckduckGoMonitor()
-    ddg_monitor.start()
+    
+            body_elem = driver.find_deferred_element_by_css_selector('body')
+    
+            with test(self.nagios_message, 'text present: python'):
+                self.verify(driver.is_text_present_in_elem(body_elem, 'python'))
+    
+    
+    monitor = SeleniumHQMonitor()
+    monitor.start()
 
 
 ### Selmon in production

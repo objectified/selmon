@@ -92,7 +92,6 @@ class Plugin(object):
 
         self.driver = None
 
-
     def setup_default_args(self):
         self.arg_parser.add_argument('-H', '--host',
                             help='selenium webdriver remote host',
@@ -106,7 +105,6 @@ class Plugin(object):
                                     ','.join(self.capabilities_mapping.keys()),
                              required=True)
 
-
     def init_connection(self):
         try:
             self.conn = RemoteConnection(self.args.host)
@@ -114,7 +112,6 @@ class Plugin(object):
             exc_class, exc, tb = sys.exc_info()
             new_exc = ConnectionException("Error connecting to Selenium server")
             raise new_exc.__class__, new_exc, tb
-
 
     def init_driver(self):
         try:
@@ -124,18 +121,15 @@ class Plugin(object):
             new_exc = DriverInitException("Error initializing driver")
             raise DriverInitException, None, tb
 
-
     def get_driver(self):
         """
         Returns the Selenium Remote webdriver instance
         """
         return self.driver
 
-
     def verify(self, boolean):
         if not boolean:
             raise SelmonTestException('verify failed')
-
 
     def run(self):
         """
@@ -144,7 +138,6 @@ class Plugin(object):
         """
         pass
 
-
     def add_extra_args(self):
         """
         To add extra arguments to your plugin, override this method and add arguments
@@ -152,7 +145,6 @@ class Plugin(object):
         will be available in self.args
         """
         pass
-
 
     def start(self):
         """
@@ -199,11 +191,14 @@ class Plugin(object):
 class SelmonTestException(Exception):
     pass
 
+
 class GlobalTimeoutException(Exception):
     pass
 
+
 class ConnectionException(Exception):
     pass
+
 
 class DriverInitException(Exception):
     pass

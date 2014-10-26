@@ -45,7 +45,7 @@ class NagiosMessage(object):
 
         return message
 
-    def __repr__(self):
+    def __str__(self):
         prepended_output = self.prepend_nagios_output(', '.join(self.msg) +
                                                       ' | ' + ' '.join(str(d) for d in self.perfdata))
         return prepended_output
