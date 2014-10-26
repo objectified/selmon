@@ -181,7 +181,7 @@ class Plugin(object):
 
             self.nagios_message.add_msg('FAILED: Exception of type: %s, message: %s' %
                                         (str(type(e)), e.args[0]))
-            self.nagios_message.raise_status(NagiosMessage.NAGIOS_STATUS_CRITICAL)
+            self.nagios_message.raise_status(NagiosMessage.NAGIOS_STATUS_UNKNOWN)
         finally:
             if self.driver:
                 self.driver.quit()
