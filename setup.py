@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='selmon',
-    version='0.1',
+    version='0.2',
     packages=['selmon','selmon.nagios'],
     url='https://github.com/objectified/selmon',
     install_requires=['selenium>=2.38.3'],
