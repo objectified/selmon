@@ -53,7 +53,6 @@ class SelmonRemoteDriver(webdriver.Remote):
                 });
             }
             return imageinfo;""")
-        print images
 
         for image in images:
             natural_width = int(image['naturalWidth'])
