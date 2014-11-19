@@ -30,7 +30,9 @@ class NagiosMessage(object):
             self.status_code = status_code
 
     def add_perfdata(self, label, uom, real, warn, crit, minval='', maxval=''):
-        datastr = "'%s'=%s%s;%s;%s;%s;%s" % (label, str(real), uom, str(warn), str(crit), str(minval), str(maxval))
+        datastr = "'%s'=%s%s;%s;%s;%s;%s" % (label, str(real), uom,
+                                             str(warn), str(crit),
+                                             str(minval), str(maxval))
         self.perfdata.append(datastr)
 
     def prepend_nagios_output(self, message):
@@ -46,6 +48,7 @@ class NagiosMessage(object):
         return message
 
     def __str__(self):
-        prepended_output = self.prepend_nagios_output(', '.join(self.msg) +
-                                                      ' | ' + ' '.join(str(d) for d in self.perfdata))
+        prepended_output = self.prepend_nagios_output(
+            ', '.join(self.msg) + ' | ' +
+            ' '.join(str(d) for d in self.perfdata))
         return prepended_output
