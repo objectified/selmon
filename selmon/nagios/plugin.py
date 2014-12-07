@@ -158,9 +158,9 @@ class Plugin(object):
 
     def start(self):
         """
-        Call the start() method for actual execution of the plugin. It calls the
-        run() method, creates a Nagios message and outputs it. Appropriate exit
-        codes are determined during the test run and the plugin exits
+        Call the start() method for actual execution of the plugin. It calls
+        the run() method, creates a Nagios message and outputs it. Appropriate
+        exit codes are determined during the test run and the plugin exits
         accordingly.
         """
         def timeout_handler(signum, frame):
