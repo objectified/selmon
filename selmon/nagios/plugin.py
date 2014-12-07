@@ -9,6 +9,7 @@ import signal
 
 
 class Plugin(object):
+
     """
     Base object for creating a Nagios plugin that use Selenium Webdriver for
     web application monitoring. Basic usage involves creating a class that
@@ -42,7 +43,8 @@ class Plugin(object):
             body_elem = driver.find_element_by_css_selector('body')
 
             with test(self.nagios_message, 'is my expected text there'):
-                self.verify(driver.is_text_present_in_elem(body_elem, 'selenium'))
+                self.verify(driver.is_text_present_in_elem(
+                                                    body_elem, 'selenium'))
 
 
     ddg_monitor = DuckduckGoMonitor()
@@ -63,12 +65,12 @@ class Plugin(object):
         'safari': DesiredCapabilities.SAFARI
     }
 
-
     def __init__(self):
         """
-        Plugin constructor. Since this base object gets inherited, there is no need to take care of
-        command line arguments, as the base object already does it for you. Run the following to see
-        what parameters your script automatically expects while inheriting from Plugin:
+        Plugin constructor. Since this base object gets inherited, there is no
+        need to take care of command line arguments, as the base object already
+        does it for you. Run the following to see what parameters your script
+        automatically expects while inheriting from Plugin:
         ./yourscript.py -h
         """
         self.nagios_message = NagiosMessage()
@@ -83,8 +85,10 @@ class Plugin(object):
         self.args = self.arg_parser.parse_args()
 
         if self.args.browser not in self.capabilities_mapping.keys():
-            self.nagios_message.add_msg('browser is invalid: %s' % self.args.browser)
-            self.nagios_message.raise_status(NagiosMessage.NAGIOS_STATUS_UNKNOWN)
+            self.nagios_message.add_msg(
+                'browser is invalid: %s' % self.args.browser)
+            self.nagios_message.raise_status(
+                NagiosMessage.NAGIOS_STATUS_UNKNOWN)
             sys.exit(self.nagios_message.status_code)
 
         self.global_timeout = self.args.timeout
@@ -93,31 +97,38 @@ class Plugin(object):
 
     def setup_default_args(self):
         self.arg_parser.add_argument('-H', '--host',
-                            help='selenium webdriver remote host',
-                            required=True)
-        self.arg_parser.add_argument('-t', '--timeout',
-                            help='timeout in seconds to use for whole execution',
-                            required=True,
-                            type=int)
-        self.arg_parser.add_argument('-b', '--browser',
-                             help='browser to use, possible values: %s' %
-                                    ','.join(self.capabilities_mapping.keys()),
-                             required=True)
+                                     help='selenium webdriver remote host',
+                                     required=True)
+        self.arg_parser.add_argument(
+            '-t',
+            '--timeout',
+            help='timeout in seconds to use for whole execution',
+            required=True,
+            type=int)
+        self.arg_parser.add_argument(
+            '-b',
+            '--browser',
+            help='browser to use, possible values: %s' %
+            ','.join(
+                self.capabilities_mapping.keys()),
+            required=True)
 
     def init_connection(self):
         try:
             self.conn = RemoteConnection(self.args.host)
-        except Exception as e:
+        except Exception:
             exc_class, exc, tb = sys.exc_info()
-            new_exc = ConnectionException("Error connecting to Selenium server")
+            new_exc = ConnectionException(
+                "Error connecting to Selenium server")
             raise new_exc.__class__, new_exc, tb
 
     def init_driver(self):
         try:
-            self.driver = SelmonRemoteDriver(self.conn, self.capabilities_mapping[self.args.browser])
-        except Exception as e:
+            self.driver = SelmonRemoteDriver(
+                self.conn,
+                self.capabilities_mapping[self.args.browser])
+        except Exception:
             exc_class, exc, tb = sys.exc_info()
-            new_exc = DriverInitException("Error initializing driver")
             raise DriverInitException, None, tb
 
     def get_driver(self):
@@ -132,24 +143,25 @@ class Plugin(object):
 
     def run(self):
         """
-        Override this method in your own plugin, then call start() on the newly created
-        object (not run() itself!)
+        Override this method in your own plugin, then call start() on the newly
+        created object (not run() itself!)
         """
         pass
 
     def add_extra_args(self):
         """
-        To add extra arguments to your plugin, override this method and add arguments
-        to self.arg_parser (an argparse ArgumentParser object). The argument values
-        will be available in self.args
+        To add extra arguments to your plugin, override this method and add
+        arguments to self.arg_parser (an argparse ArgumentParser object). The
+        argument values will be available in self.args
         """
         pass
 
     def start(self):
         """
-        Call the start() method for actual execution of the plugin. It calls the run()
-        method, creates a Nagios message and outputs it. Appropriate exit codes are
-        determined during the test run and the plugin exits accordingly.
+        Call the start() method for actual execution of the plugin. It calls the
+        run() method, creates a Nagios message and outputs it. Appropriate exit
+        codes are determined during the test run and the plugin exits
+        accordingly.
         """
         def timeout_handler(signum, frame):
             raise GlobalTimeoutException()
@@ -164,24 +176,35 @@ class Plugin(object):
             self.run()
 
         except WebDriverException as e:
-            self.nagios_message.add_msg('WebDriverException occurred: %s' % e.msg)
-            self.nagios_message.raise_status(NagiosMessage.NAGIOS_STATUS_CRITICAL)
+            self.nagios_message.add_msg(
+                'WebDriverException occurred: %s' % e.msg)
+            self.nagios_message.raise_status(
+                NagiosMessage.NAGIOS_STATUS_CRITICAL)
         except GlobalTimeoutException as e:
-            self.nagios_message.add_msg('Global timeout of %s seconds reached' % self.global_timeout)
-            self.nagios_message.raise_status(NagiosMessage.NAGIOS_STATUS_CRITICAL)
+            self.nagios_message.add_msg(
+                'Global timeout of %s seconds reached' % self.global_timeout)
+            self.nagios_message.raise_status(
+                NagiosMessage.NAGIOS_STATUS_CRITICAL)
         except ConnectionException:
-            self.nagios_message.add_msg('Could not connect to Selenium server at ' % self.args.host)
-            self.nagios_message.raise_status(NagiosMessage.NAGIOS_STATUS_UNKNOWN)
+            self.nagios_message.add_msg(
+                'Could not connect to Selenium server at ' % self.args.host)
+            self.nagios_message.raise_status(
+                NagiosMessage.NAGIOS_STATUS_UNKNOWN)
         except DriverInitException as e:
             self.nagios_message.add_msg('Could not initialize Selenium driver')
-            self.nagios_message.raise_status(NagiosMessage.NAGIOS_STATUS_UNKNOWN)
+            self.nagios_message.raise_status(
+                NagiosMessage.NAGIOS_STATUS_UNKNOWN)
         except Exception as e:
             if not e.args:
                 e.args = ('No message in exception',)
 
-            self.nagios_message.add_msg('FAILED: Exception of type: %s, message: %s' %
-                                        (str(type(e)), e.args[0]))
-            self.nagios_message.raise_status(NagiosMessage.NAGIOS_STATUS_UNKNOWN)
+            self.nagios_message.add_msg(
+                'FAILED: Exception of type: %s, message: %s' %
+                (str(
+                    type(e)),
+                    e.args[0]))
+            self.nagios_message.raise_status(
+                NagiosMessage.NAGIOS_STATUS_UNKNOWN)
         finally:
             if self.driver:
                 self.driver.quit()
@@ -204,5 +227,3 @@ class ConnectionException(Exception):
 
 class DriverInitException(Exception):
     pass
-
-
