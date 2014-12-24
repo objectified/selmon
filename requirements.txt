@@ -1,4 +1,2 @@
 argparse==1.2.1
 selenium==2.44.0
-selmon==0.2
-wsgiref==0.1.2
